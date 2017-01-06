@@ -6,6 +6,7 @@ import './css/variables.css';
 import './css/buttons.css';
 import './css/index.css';
 import './css/marco.css';
+import './css/polo.css';
 
 ReactDOM.render(
   <App />,

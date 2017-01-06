@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import $ from 'jquery';
 import Result from './polo.js';
+import Beacon from './beacon.js';
 
 class Tracker extends Component {
 
@@ -10,7 +11,10 @@ class Tracker extends Component {
         error: null,
         selectedOption: 'walking',
         results: null,
-        shortcode: 'trck.at/ERMLWD'
+        trip: null,
+        task: null,
+        destination: null,
+        started: null
     };
 
     focus = true;
@@ -24,15 +28,14 @@ class Tracker extends Component {
     handleForm = (e) => {
         e.preventDefault();
 
-        var origin = this.refs['origin-address'].value;
         var destination = this.refs['destination-address'].value;
         var hyper_data = {
-            address: origin,
             destination: destination,
-            vehicle_type: this.state.selectedOption
+            vehicle_type: this.state.selectedOption,
+            action: "delivery"
         };
 
-        if (origin && destination) {
+        if (destination) {
             // create driver and task
             $.ajax({
                 url: 'http://' + this.host + ':4500/startTrip',
@@ -40,22 +43,11 @@ class Tracker extends Component {
                 data: JSON.stringify(hyper_data),
                 contentType: 'application/json',
                 success: (response) => {
-                    var payload = {
+                    this.setState({
+                        results: true,
                         trip: response.trip,
                         task: response.task,
                         destination: response.destination,
-                        origin: origin
-                    };
-                    $.ajax({
-                        url: 'http://' + this.host + ':4500/addTask',
-                        type: 'post',
-                        data: JSON.stringify(payload),
-                        contentType: 'application/json',
-                        success: (response) => {
-                            this.setState({
-                                results: response
-                            });
-                        }
                     });
                 }
             });
@@ -68,20 +60,39 @@ class Tracker extends Component {
         }
     };
 
+    startTrip = () => {
+        this.setState({
+            started: true
+        })  ;
+    };
 
     render() {
 
         return (
             <div>
 
-                {this.state.results == null ?
+                { this.state.results ?
+                    <div>
+                        <Result
+                            url={this.state.task.tracking_url}
+                            taskId={this.state.task.id}
+                        />
+                        { this.state.started ?
+                            null
+                            :
+                            <Beacon
+                                trip={this.state.trip}
+                                destination={this.state.destination}
+                                startTrip={this.startTrip}
+                            />
+                        }
+                    </div>
+                    :
                     <div className="container">
                         <form id="pin1-input" ref="user_form" onSubmit={this.handleForm} >
-                            <input type="text" placeholder="set current location" ref="origin-address" autoFocus={this.focus} /><br/>
-                            <input type="text" placeholder="set destination" ref="destination-address" /><br/>
+                            <input type="text" placeholder="set destination" ref="destination-address" autoFocus={this.focus} /><br/>
 
-
-                            {this.state.error ? <div><span>{this.state.error}</span><br/></div> : null}
+                            { this.state.error ? <div><span>{this.state.error}</span><br/></div> : null }
 
                             <div className="radio-buttons">
                                 <label className="radio-inline"><input type="radio" name="mode" value="walking"
@@ -103,8 +114,6 @@ class Tracker extends Component {
                             <button id="start-1" type='submit' >Set Destination</button>
                         </form>
                     </div>
-                    :
-                    <Result shortcode={this.state.shortcode} />
                 }
 
             </div>

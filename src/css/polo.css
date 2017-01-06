@@ -1,0 +1,11 @@
+.flex-column .flex-column .footer {
+    visibility: hidden !important;
+}
+
+.flex-column ~ .footer {
+    display: none;
+}
+
+#edit-address img {
+    display: none !important;
+}
