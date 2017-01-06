@@ -19,7 +19,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 
 // Task can have a Destination and ETA, task object represents an event that is performed by a driver on a trip.
-// Create a driver and trip, add tasks (with ETA) to the live trip
+// Create a trip, add tasks (with ETA) to the live trip
 
 // POST request to create a DESTINATION, returns destination object (with geocoded location)
 function setDestination(dest, callback) {
@@ -46,33 +46,10 @@ function setDestination(dest, callback) {
     });
 };
 
-// POST request to create a DRIVER, returns driver object
-function createDriver(mode, callback) {
+// POST request to create a TASK with destination, returns task object
+function createTask(destination, origin, callback) {
 
-    var hypertrack_url = 'https://app.hypertrack.io/api/v1/drivers/';
-
-    request.post({
-        url: hypertrack_url,
-        body: {
-            "vehicle_type": mode
-        },
-        headers: {
-            Authorization: 'token ' + key.hypertrack,
-            'Content-Type': 'application/json'
-        },
-        json: true
-    }, function (error, response, body) {
-        if (!error && response.statusCode == 201) {
-            callback(false, body);
-        } else {
-            console.log('createDriver ' + error);
-            callback(error);
-        }
-    });
-};
-
-// POST request to create a TASK with driver and destination, returns task object
-function createTask(driver, destination, callback) {
+    // TODO add origin geolocation
 
     var hypertrack_url = 'https://app.hypertrack.io/api/v1/tasks/';
 
@@ -80,8 +57,6 @@ function createTask(driver, destination, callback) {
         url: hypertrack_url,
         body: {
             "destination_id": destination.id,
-            "destination": destination,
-            "driver_id": driver.id
         },
         headers: {
             Authorization: 'token ' + key.hypertrack,
@@ -98,16 +73,16 @@ function createTask(driver, destination, callback) {
     });
 };
 
-// POST request to create a TRIP with driver and task
-function createTrip(driver, task, callback) {
+// POST request to create a TRIP with array of tasks and mode
+function createTrip(task, mode, callback) {
 
     var hypertrack_url = 'https://app.hypertrack.io/api/v1/trips/';
 
     request.post({
         url: hypertrack_url,
         body: {
-            "driver_id": driver,
-            "tasks": task,
+            "tasks": [task.id],
+            "vehicle_type": mode,
         },
         headers: {
             Authorization: 'token ' + key.hypertrack,
@@ -126,41 +101,69 @@ function createTrip(driver, task, callback) {
 
 // Invoke helper functions to create destination, driver, task, and trip
 // to return trip object
-app.post('/kickoff', function (req, res) {
+app.post('/startTrip', function (req, res) {
 
     var destination = {};
-    var driver = {};
-    var task = {}; // requires driver and destination objects
-    var trip = {}; // requires driver and task objects
+    var task = {}; // requires destination object
+    var trip = {}; // requires task object, and optional mode
 
     setDestination(req.body.destination, function(err1, destObj){
-            if (err1) {
-                res.status(400).send(err1);
-            } else {
-                destination = destObj;
-            }
-        createDriver(req.body.vehicle_type, function(err2, driverObj){
+        if (err1) {
+            res.status(400).send(err1);
+            return;
+        }
+        destination = destObj;
+        createTask(destination, function(err2, taskObj){
             if (err2) {
                 res.status(400).send(err2);
-            } else {
-                driver = driverObj;
+                return;
             }
-            createTask(driver, destination, function(err3, taskObj){
+            task = taskObj;
+            createTrip(task, req.body.vehicle_type, function(err3, tripObj){
                 if (err3) {
                     res.status(400).send(err3);
-                } else {
-                    task = taskObj;
+                    return;
                 }
-                createTrip(driver, task, function(err4, tripObj){
-                    if (err4) {
-                        res.status(400).send(err4);
-                    } else {
-                        trip = tripObj;
-                        res.send(trip);
-                    }
-                })
+                trip = tripObj;
+                var payload = {
+                    trip: trip,
+                    task: task,
+                    destination: destination
+                };
+                res.send(payload);
             })
         })
+    });
+});
+
+// Add a task to a live trip, requires trip_id and task_id
+app.post('/addTask', function (req, res) {
+
+    var hypertrack_url = `https://app.hypertrack.io/api/v1/trips/${req.body.trip.id}/add_task/`;
+
+    createTask(req.body.destination, req.body.origin, function(err, taskObj) {
+
+        if (err) {
+            res.status(400).send(err);
+        }
+
+        request.post({
+            url: hypertrack_url,
+            body: {
+                "task_id": taskObj.id
+            },
+            headers: {
+                Authorization: 'token ' + key.hypertrack,
+                'Content-Type': 'application/json'
+            },
+            json: true
+        }, function (error, response, body) {
+            if (!error && response.statusCode == 200) {
+                res.send(body);
+            } else {
+                res.status(400).send(body);
+            }
+        });
     });
 });
 

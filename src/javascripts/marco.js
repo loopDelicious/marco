@@ -24,9 +24,10 @@ class Tracker extends Component {
     handleForm = (e) => {
         e.preventDefault();
 
-        var origin = 'placeholder';
+        var origin = this.refs['origin-address'].value;
         var destination = this.refs['destination-address'].value;
         var hyper_data = {
+            address: origin,
             destination: destination,
             vehicle_type: this.state.selectedOption
         };
@@ -34,13 +35,27 @@ class Tracker extends Component {
         if (origin && destination) {
             // create driver and task
             $.ajax({
-                url: 'http://' + this.host + ':4500/kickoff',
+                url: 'http://' + this.host + ':4500/startTrip',
                 type: 'post',
                 data: JSON.stringify(hyper_data),
                 contentType: 'application/json',
                 success: (response) => {
-                    this.setState({
-                        results: response
+                    var payload = {
+                        trip: response.trip,
+                        task: response.task,
+                        destination: response.destination,
+                        origin: origin
+                    };
+                    $.ajax({
+                        url: 'http://' + this.host + ':4500/addTask',
+                        type: 'post',
+                        data: JSON.stringify(payload),
+                        contentType: 'application/json',
+                        success: (response) => {
+                            this.setState({
+                                results: response
+                            });
+                        }
                     });
                 }
             });
@@ -62,7 +77,8 @@ class Tracker extends Component {
                 {this.state.results == null ?
                     <div className="container">
                         <form id="pin1-input" ref="user_form" onSubmit={this.handleForm} >
-                            <input type="text" placeholder="set destination" ref="destination-address" autoFocus={this.focus} /><br/>
+                            <input type="text" placeholder="set current location" ref="origin-address" autoFocus={this.focus} /><br/>
+                            <input type="text" placeholder="set destination" ref="destination-address" /><br/>
 
 
                             {this.state.error ? <div><span>{this.state.error}</span><br/></div> : null}
