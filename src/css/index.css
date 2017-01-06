@@ -1,0 +1,25 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--primary-font);
+}
+
+hr {
+  margin-bottom: 40px;
+  border-color: lightgray;
+}
+
+.divider {
+  width: 400px;
+  border-color: var(--tertiary-color);
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 30px;
+}
+
+h4 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
