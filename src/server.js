@@ -190,41 +190,72 @@ app.post('/startTrip', function (req, res) {
 });
 
 // Add a task to a live trip, requires task_id and trip_id
-app.post('/addTask', function (req, res) {
+// Update GPS log with driver_id and timestamp
+app.post('/addGPS', function (req, res) {
 
-    var destination = req.body.destination;
-    var action = req.body.action;
-    var trip = req.body.trip;
-    var updates = {
-        'location': req.body.location,
-        'url': req.body.url
+    // var destination = req.body.destination;
+    // var action = req.body.action;
+    // var trip = req.body.trip;
+    // var task = {};
+    // var updates = {
+    //     'location': req.body.location,
+    //     'url': req.body.url
+    // };
+
+    var driver_id = req.body.trip.driver_id;
+    var location = {
+        "type": "Point",
+        "coordinates": req.body.location.coordinates
     };
-    var task = {};
+    var recorded_at = (new Date).toISOString();
 
+    var hypertrack_url = 'https://app.hypertrack.io/api/v1/gps/';
 
-    createTask(destination, action, function(err1, taskObj) {
-        if (err1) {
-            res.status(400).send(err1);
-            return;
+    request.post({
+        url: hypertrack_url,
+        body: {
+            "driver_id": driver_id,
+            "location": location,
+            "recorded_at": recorded_at
+        },
+        headers: {
+            Authorization: 'token ' + key.hypertrack,
+            'Content-Type': 'application/json'
+        },
+        json: true
+    }, function (error, response, body) {
+        console.log(response.statusCode);
+        if (!error && response.statusCode == 201) {
+            res.send(body);
+        } else {
+            console.log('createGPS ' + error);
+            res.status(400).send(body);
         }
-        task = taskObj;
-        console.log('created taskObj!');
-        addTask(task, trip, function(err2, response2) {
-            if (err2) {
-                res.status(400).send(err2);
-                return;
-            }
-            console.log('added task to trip!');
-            updateTask(task, updates, function(err3, response3) {
-                if (err3) {
-                    console.log(err3);
-                    res.status(400).send(err3);
-                    return;
-                }
-                res.send(response3);
-            })
-        })
     });
+
+    // createTask(destination, action, function(err1, taskObj) {
+    //     if (err1) {
+    //         res.status(400).send(err1);
+    //         return;
+    //     }
+    //     task = taskObj;
+    //     console.log('created taskObj!');
+    //     addTask(task, trip, function(err2, response2) {
+    //         if (err2) {
+    //             res.status(400).send(err2);
+    //             return;
+    //         }
+    //         console.log('added task to trip!');
+    //         updateTask(task, updates, function(err3, response3) {
+    //             if (err3) {
+    //                 console.log(err3);
+    //                 res.status(400).send(err3);
+    //                 return;
+    //             }
+    //             res.send(response3);
+    //         })
+    //     })
+    // });
 });
 
 app.listen(process.env.PORT || 4500);

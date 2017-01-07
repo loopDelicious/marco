@@ -32,7 +32,7 @@ class Beacon extends Component {
         };
 
         $.ajax({
-            url: 'http://' + this.host + ':4500/addTask',
+            url: 'http://' + this.host + ':4500/addGPS',
             type: 'post',
             data: JSON.stringify(payload),
             contentType: 'application/json',
