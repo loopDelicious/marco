@@ -45,19 +45,16 @@ class Beacon extends Component {
         });
     };
 
+    // TODO: show on my way button, change to update location
+
     render() {
 
         return (
             <div>
-                { this.state.inTransit ?
-                    null
-                    :
-                    <div>
-                        <p>Allow location access so we can track your ETA.</p>
-                        <button id="gelolocate" onClick={this.getLocation}>On My Way!</button>
-                    </div>
 
-                }
+                <p>Allow location access so we can track your ETA.</p>
+                <button id="geolocate" onClick={this.getLocation}>{this.state.inTransit ? 'Update Location' : 'On My Way!'}</button>
+
             </div>
         )
     }
